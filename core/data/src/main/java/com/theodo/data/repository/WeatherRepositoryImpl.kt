@@ -36,11 +36,13 @@ class WeatherRepositoryImpl @Inject constructor(
                 }
             } catch (e: Exception) {
                 // todo
-            } finally {
-                emit(dao.getLatestWeather().map {
-                    it?.toDomain()
-                })
             }
+
+            emit(
+                dao.getLatestWeather().map {
+                    it?.toDomain()
+                }
+            )
         }
     }
 

@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.runtime.Composable
@@ -40,9 +41,8 @@ fun HomeScreen(
             private val anim = Animatable(0f, Float.VectorConverter)
             override val distanceFraction
                 get() = anim.value
-
             override val isAnimating: Boolean
-                get() = false
+                get() = true
 
             override suspend fun animateToThreshold() {
                 anim.animateTo(1f, spring(dampingRatio = Spring.DampingRatioHighBouncy))
@@ -60,26 +60,28 @@ fun HomeScreen(
 
     val state = viewModel.state.collectAsState().value
 
-    PullToRefreshBox(
-        state = pullToRefreshState,
-        isRefreshing = state is HomeState.Refreshing,
-        onRefresh = viewModel::getWeather,
-    ) {
-        when (state) {
-            is HomeState.Loading -> {
-                Loading()
+    Surface(modifier = Modifier.fillMaxSize()) {
+        PullToRefreshBox(
+            state = pullToRefreshState,
+            isRefreshing = state is HomeState.Refreshing,
+            onRefresh = {
+                viewModel.getWeather(true)
+            },
+        ) {
+            when (state) {
+                is HomeState.Loading -> {
+                    Loading()
+                }
+
+                is HomeState.Success -> {
+                    WeatherContent(
+                        weatherData = state.weather,
+                        paddingValue = paddingValue,
+                    )
+                }
+
+                else -> Unit
             }
-
-            is HomeState.Success -> {
-
-                WeatherContent(
-                    weatherData = state.weather,
-                    paddingValue = paddingValue,
-                )
-
-            }
-
-            else -> Unit
         }
     }
 }
@@ -109,41 +111,41 @@ fun WeatherContent(
             )
 
             // TODO: to be moved to the ViewModel
-            // filter by current timestep
             val currentWeather =
                 weatherData.filterNotNull().flatMap { it.timelines }
-                    .first { it.timeStep == "current" }.intervals.first().values
+                    .firstOrNull { it.timeStep == "current" }?.intervals?.first()?.values
 
             Column(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = currentWeather.windGust.toString(),
+                    text = currentWeather?.windGust.toString(),
                     style = MaterialTheme.typography.titleLarge
                 )
 
                 Text(
-                    text = currentWeather.temperature.toString(),
+                    text = currentWeather?.temperature.toString(),
                     style = MaterialTheme.typography.titleLarge
                 )
 
                 Text(
-                    text = currentWeather.temperatureApparent.toString(),
+                    text = currentWeather?.temperatureApparent.toString(),
                     style = MaterialTheme.typography.titleLarge
                 )
 
             }
         }
         Column(
-            modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            LazyColumn {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize()
+            ) {
                 items(weatherData) { timeline ->
                     timeline?.timelines?.forEach {
-                        val intervalValue = it.intervals.first().values
+                        val intervalValue = it.intervals.firstOrNull()?.values
                         Column(modifier = Modifier.padding(vertical = 8.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -155,7 +157,7 @@ fun WeatherContent(
                                 )
 
                                 Text(
-                                    text = intervalValue.temperature.toString(),
+                                    text = intervalValue?.temperature.toString(),
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                             }
@@ -169,7 +171,7 @@ fun WeatherContent(
                                 )
 
                                 Text(
-                                    text = intervalValue.temperatureApparent.toString(),
+                                    text = intervalValue?.temperatureApparent.toString(),
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                             }
@@ -183,7 +185,7 @@ fun WeatherContent(
                                 )
 
                                 Text(
-                                    text = intervalValue.windSpeed.toString(),
+                                    text = intervalValue?.windSpeed.toString(),
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                             }
